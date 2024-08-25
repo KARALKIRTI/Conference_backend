@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conference Website</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login/Signup Modal -->
+<div id="authModal" class="modal">
+    <div class="modal-content">
+        <div class="form-container">
+            <div class="form-toggle">
+                <button id="loginToggle" class="active">Login</button>
+                <button id="signupToggle">Signup</button>
+            </div>
+            <form id="loginForm" class="auth-form">
+                <label for="loginEmail">Email Address</label>
+                <input type="email" id="loginEmail" required>
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" required>
+                <button type="submit">Login</button>
+                <p><a href="#">Forgot password?</a></p>
+                <p>Not a member? <a href="#" id="showSignup">Signup now</a></p>
+            </form>
+            <form id="signupForm" class="auth-form" styles="display: none;">
+                <label for="signupName">Name</label>
+                <input type="text" id="signupName" name="name" required>
+                
+                <label for="signupEmail">Email Address</label>
+                <input type="email" id="signupEmail" name="email" required>
+                
+                <label for="signupPhone">Phone Number</label>
+                <input type="tel" id="signupPhone" name="phone" required>
+                
+                <label for="signupPassword">Password</label>
+                <input type="password" id="signupPassword" name="password" required>
+                
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" required>
+                
+                <button type="submit">Signup</button>
+                <p>Already a member? <a href="#" id="showLogin">Login now</a></p>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <header>
+        <div class="logo"><span class="bold-c">C</span>onference</div>
+        <nav>
+            <ul>
+                <li><a href="#" onclick="showSection('home')">Home</a></li>
+                <li><a href="#" onclick="showSection('about')">About</a></li>
+                <li><a href="#" onclick="showSection('schedules')">Schedules</a></li>
+                <li><a href="#" onclick="showSection('speakers')">Speakers</a></li>
+                <li><a href="#" class="btn-tickets" id="payBtn">Get Tickets</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home" class="section-content active">
+            <div class="hero">
+                <h1>Dr. Sweety Sah Conference <span>TECH EVENT</span></h1>
+                <div class="countdown-timer">
+                    <div class="time-box">
+                        <span class="number" id="weeks">0</span>
+                        <span class="label">weeks</span>
+                    </div>
+                    <div class="time-box">
+                        <span class="number" id="days">0</span>
+                        <span class="label">days</span>
+                    </div>
+                    <div class="time-box">
+                        <span class="number" id="hours">0</span>
+                        <span class="label">hours</span>
+                    </div>
+                    <div class="time-box">
+                        <span class="number" id="minutes">0</span>
+                        <span class="label">minutes</span>
+                    </div>
+                    <div class="time-box">
+                        <span class="number" id="seconds">0</span>
+                        <span class="label">seconds</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="section-content">
+            <h1>About the Conference</h1>
+            <p>Details about the conference go here. This section will provide information about the event, its purpose, and any other relevant information.</p>
+        </section>
+
+        <section id="schedules" class="section-content">
+            <h1>Event Schedules</h1>
+            <p>Here you can provide the event schedule, including timings, speakers, and topics.</p>
+        </section>
+
+        <section id="speakers" class="section-content">
+            <h1>Meet the Speakers</h1>
+            <p>Information about the speakers, their backgrounds, and what they will be talking about.</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Conference. All rights reserved.</p>
+    </footer>
+
+    <!-- Razorpay Payment Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="script.js"></script>
+    <script>
+        function showSection(sectionId) {
+            // Hide all sections
+            var sections = document.querySelectorAll('.section-content');
+            sections.forEach(function(section) {
+                section.classList.remove('active');
+            });
+
+            // Show the selected section
+            document.getElementById(sectionId).classList.add('active');
+        }
+
+        // Default: Show home section on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            showSection('home');
+        });
+    </script>
+
+
+</body>
+</html>
+
+
+    
