@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const sqlite3 = require('sqlite3').verbose();
+const mysql = require('mysql');
 const path = require('path');
 const session = require('express-session');
 const Razorpay = require('razorpay'); // Include Razorpay
@@ -29,12 +29,38 @@ app.use(session({
 // Serve static files (like your HTML, CSS, JS files)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Initialize SQLite database (file-based)
-const db = new sqlite3.Database('users.db');
+// Initialize MySQL database connection
+const db = mysql.createConnection({
+    host: 'localhost',    // Replace with your MySQL host
+    user: 'root', // Replace with your MySQL username
+    password: '1234', // Replace with your MySQL password
+    database: 'conference_db' // Replace with your MySQL database name
+});
+
+db.connect(err => {
+    if (err) {
+        console.error('Error connecting to MySQL database:', err);
+        return;
+    }
+    console.log('Connected to MySQL database');
+});
 
 // Create users table with payment_status
-db.serialize(() => {
-    db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, phone TEXT, password TEXT, payment_status TEXT DEFAULT 'pending')");
+db.query(`
+    CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255),
+        email VARCHAR(255) UNIQUE,
+        phone VARCHAR(20),
+        password VARCHAR(255),
+        payment_status VARCHAR(50) DEFAULT 'pending'
+    )
+`, (err, result) => {
+    if (err) {
+        console.error('Error creating users table:', err);
+        return;
+    }
+    console.log('Users table created or already exists');
 });
 
 // Serve the index.html file for the root route
@@ -46,11 +72,11 @@ app.get('/', (req, res) => {
 app.post('/check-user', (req, res) => {
     const email = req.body.email;
 
-    db.get("SELECT * FROM users WHERE email = ?", [email], (err, row) => {
+    db.query("SELECT * FROM users WHERE email = ?", [email], (err, results) => {
         if (err) {
             return res.status(500).send("Database error");
         }
-        if (row) {
+        if (results.length > 0) {
             res.send({ exists: true });
         } else {
             res.send({ exists: false });
@@ -62,12 +88,12 @@ app.post('/check-user', (req, res) => {
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
 
-    db.get("SELECT * FROM users WHERE email = ? AND password = ?", [email, password], (err, row) => {
+    db.query("SELECT * FROM users WHERE email = ? AND password = ?", [email, password], (err, results) => {
         if (err) {
             return res.status(500).send({ success: false, message: "Database error" });
         }
-        if (row) {
-            req.session.userId = row.id;  // Store user ID in session
+        if (results.length > 0) {
+            req.session.userId = results[0].id;  // Store user ID in session
             req.session.loggedIn = true; // Set session loggedIn to true
             res.send({ success: true });
         } else {
@@ -80,9 +106,9 @@ app.post('/login', (req, res) => {
 app.post('/signup', (req, res) => {
     const { name, email, phone, password } = req.body;
 
-    db.run("INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)", [name, email, phone, password], (err) => {
+    db.query("INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)", [name, email, phone, password], (err, result) => {
         if (err) {
-            if (err.code === 'SQLITE_CONSTRAINT') {
+            if (err.code === 'ER_DUP_ENTRY') {
                 return res.status(400).send({ success: false, message: "Email or phone number already exists" });
             } else {
                 return res.status(500).send({ success: false, message: "Database error" });
@@ -90,9 +116,9 @@ app.post('/signup', (req, res) => {
         }
 
         // Automatically log in the user after signup
-        db.get("SELECT * FROM users WHERE email = ?", [email], (err, row) => {
-            if (row) {
-                req.session.userId = row.id;
+        db.query("SELECT * FROM users WHERE email = ?", [email], (err, results) => {
+            if (results.length > 0) {
+                req.session.userId = results[0].id;
                 req.session.loggedIn = true;
                 res.send({ success: true });
             } else {
@@ -133,24 +159,24 @@ app.post('/create-order', (req, res) => {
 
 // Endpoint to view users in the database (for debugging purposes)
 app.get('/view-users', (req, res) => {
-    db.all("SELECT * FROM users", [], (err, rows) => {
+    db.query("SELECT * FROM users", [], (err, results) => {
         if (err) {
             return res.status(500).send("Database error");
         }
-        res.json(rows);
+        res.json(results);
     });
 });
 
 // API to get logged-in user's details
 app.get('/get-user-details', (req, res) => {
     if (req.session.loggedIn) {
-        db.get("SELECT name, email, phone FROM users WHERE id = ?", [req.session.userId], (err, row) => {
+        db.query("SELECT name, email, phone FROM users WHERE id = ?", [req.session.userId], (err, results) => {
             if (err) {
                 console.error("Database error:", err); // Log the error for debugging
                 return res.status(500).send({ error: "Database error" });
             }
-            if (row) {
-                res.send({ success: true, user: row });
+            if (results.length > 0) {
+                res.send({ success: true, user: results[0] });
             } else {
                 res.send({ success: false, message: "User not found" });
             }
@@ -166,7 +192,7 @@ app.post('/update-payment-status', (req, res) => {
     const userId = req.session.userId;
 
     if (userId && order_id) {
-        db.run("UPDATE users SET payment_status = 'done' WHERE id = ?", [userId], function(err) {
+        db.query("UPDATE users SET payment_status = 'done' WHERE id = ?", [userId], function(err) {
             if (err) {
                 console.error("Error updating payment status:", err);
                 return res.status(500).send({ success: false, message: "Database error" });
