@@ -58,10 +58,10 @@ async function run() {
                 const result = await usersCollection.insertOne({ name, email, phone, password, payment_status: 'pending' });
                 req.session.userId = result.insertedId;
                 req.session.loggedIn = true;
-                res.send({ success: true });
+                res.json({ success: true });
             } catch (err) {
                 console.error('Signup Database Error:', err);
-                res.status(500).send({ success: false, message: "Database error" });
+                res.status(500).json({ success: false, message: "Database error" });
             }
         });
 
@@ -73,13 +73,13 @@ async function run() {
                 if (user) {
                     req.session.userId = user._id;
                     req.session.loggedIn = true;
-                    res.send({ success: true });
+                    res.json({ success: true });
                 } else {
-                    res.send({ success: false, message: "Incorrect email or password" });
+                    res.json({ success: false, message: "Incorrect email or password" });
                 }
             } catch (err) {
                 console.error('Login Database Error:', err);
-                res.status(500).send({ success: false, message: "Database error" });
+                res.status(500).json({ success: false, message: "Database error" });
             }
         });
 
@@ -88,19 +88,19 @@ async function run() {
             const email = req.body.email;
             try {
                 const user = await usersCollection.findOne({ email });
-                res.send({ exists: !!user });
+                res.json({ exists: !!user });
             } catch (err) {
                 console.error('Check User Database Error:', err);
-                res.status(500).send("Database error");
+                res.status(500).json({ message: "Database error" });
             }
         });
 
         // API to check if user is logged in
         app.get('/check-login', (req, res) => {
             if (req.session.loggedIn) {
-                res.send({ loggedIn: true });
+                res.json({ loggedIn: true });
             } else {
-                res.send({ loggedIn: false });
+                res.json({ loggedIn: false });
             }
         });
 
@@ -108,13 +108,13 @@ async function run() {
         app.post('/create-order', async (req, res) => {
             const userId = req.session.userId;
             if (!userId) {
-                return res.status(401).send({ success: false, message: "User not logged in" });
+                return res.status(401).json({ success: false, message: "User not logged in" });
             }
 
             try {
                 const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
                 if (user.payment_status === 'done') {
-                    return res.send({ success: false, message: "Payment already done!" });
+                    return res.json({ success: false, message: "Payment already done!" });
                 }
 
                 const amount = 1000; // The amount in paise (1000 paise = 10 INR)
@@ -129,13 +129,13 @@ async function run() {
                 razorpay.orders.create(options, function(err, order) {
                     if (err) {
                         console.error("Error creating Razorpay order:", err);
-                        return res.status(500).send({ error: err });
+                        return res.status(500).json({ error: err });
                     }
-                    res.send({ success: true, order });
+                    res.json({ success: true, order });
                 });
             } catch (err) {
                 console.error('Create Order Database Error:', err);
-                res.status(500).send({ success: false, message: "Database error" });
+                res.status(500).json({ success: false, message: "Database error" });
             }
         });
 
@@ -145,16 +145,16 @@ async function run() {
                 try {
                     const user = await usersCollection.findOne({ _id: new ObjectId(req.session.userId) });
                     if (user) {
-                        res.send({ success: true, user: { name: user.name, email: user.email, phone: user.phone, payment_status: user.payment_status } });
+                        res.json({ success: true, user: { name: user.name, email: user.email, phone: user.phone, payment_status: user.payment_status } });
                     } else {
-                        res.send({ success: false, message: "User not found" });
+                        res.json({ success: false, message: "User not found" });
                     }
                 } catch (err) {
                     console.error("Get User Details Database Error:", err);
-                    res.status(500).send({ error: "Database error" });
+                    res.status(500).json({ error: "Database error" });
                 }
             } else {
-                res.send({ success: false, message: "Not logged in" });
+                res.json({ success: false, message: "Not logged in" });
             }
         });
 
@@ -169,13 +169,13 @@ async function run() {
                         { _id: new ObjectId(userId) },
                         { $set: { payment_status: 'done' } }
                     );
-                    res.send({ success: true });
+                    res.json({ success: true });
                 } catch (err) {
                     console.error("Error updating payment status:", err);
-                    res.status(500).send({ success: false, message: "Database error" });
+                    res.status(500).json({ success: false, message: "Database error" });
                 }
             } else {
-                res.status(400).send({ success: false, message: "Invalid user or order ID" });
+                res.status(400).json({ success: false, message: "Invalid user or order ID" });
             }
         });
 
