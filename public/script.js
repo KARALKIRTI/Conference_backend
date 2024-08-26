@@ -26,7 +26,7 @@ const countdownInterval = setInterval(function() {
 
 // Function to initiate Razorpay payment
 function startRazorpay(userData) {
-    fetch('/create-order', {
+    fetch('/api/create-order', {  // Changed '/create-order' to '/api/create-order'
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -49,7 +49,7 @@ function startRazorpay(userData) {
                 "order_id": data.order.id,
                 "handler": function (response) {
                     alert('Payment successful!');
-                    fetch('/update-payment-status', {
+                    fetch('/api/update-payment-status', {  // Changed '/update-payment-status' to '/api/update-payment-status'
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -105,7 +105,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
 
-    fetch('/login', {
+    fetch('/api/login', {  // Changed '/login' to '/api/login'
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
         if (data.success) {
             alert('Login successful!');
             document.getElementById('authModal').style.display = 'none';
-            fetch('/get-user-details')
+            fetch('/api/get-user-details')  // Changed '/get-user-details' to '/api/get-user-details'
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Network response was not ok ' + response.statusText);
@@ -179,7 +179,7 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
         return;
     }
 
-    fetch('/signup', {
+    fetch('/api/signup', {  // Changed '/signup' to '/api/signup'
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

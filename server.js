@@ -73,7 +73,7 @@ async function run() {
         const usersCollection = db.collection('users');
 
         // API to handle signup
-        app.post('/signup', async (req, res) => {
+        app.post('/api/signup', async (req, res) => {  // Changed '/signup' to '/api/signup'
             const { name, email, phone, password } = req.body;
             try {
                 const result = await usersCollection.insertOne({ name, email, phone, password, payment_status: 'pending' });
@@ -87,7 +87,7 @@ async function run() {
         });
 
         // API to handle login
-        app.post('/login', async (req, res) => {
+        app.post('/api/login', async (req, res) => {  // Changed '/login' to '/api/login'
             const { email, password } = req.body;
             try {
                 const user = await usersCollection.findOne({ email, password });
@@ -105,7 +105,7 @@ async function run() {
         });
 
         // API to check if a user already exists
-        app.post('/check-user', async (req, res) => {
+        app.post('/api/check-user', async (req, res) => {  // Changed '/check-user' to '/api/check-user'
             const email = req.body.email;
             try {
                 const user = await usersCollection.findOne({ email });
@@ -117,7 +117,7 @@ async function run() {
         });
 
         // API to check if user is logged in
-        app.get('/check-login', (req, res) => {
+        app.get('/api/check-login', (req, res) => {  // Changed '/check-login' to '/api/check-login'
             if (req.session.loggedIn) {
                 res.json({ loggedIn: true });
             } else {
@@ -126,7 +126,7 @@ async function run() {
         });
 
         // API to create Razorpay order
-        app.post('/create-order', async (req, res) => {
+        app.post('/api/create-order', async (req, res) => {  // Changed '/create-order' to '/api/create-order'
             const userId = req.session.userId;
             if (!userId) {
                 return res.status(401).json({ success: false, message: "User not logged in" });
@@ -161,7 +161,7 @@ async function run() {
         });
 
         // API to get logged-in user's details
-        app.get('/get-user-details', async (req, res) => {
+        app.get('/api/get-user-details', async (req, res) => {  // Changed '/get-user-details' to '/api/get-user-details'
             if (req.session.loggedIn) {
                 try {
                     const user = await usersCollection.findOne({ _id: new ObjectId(req.session.userId) });
@@ -180,7 +180,7 @@ async function run() {
         });
 
         // API to update payment status after payment completion
-        app.post('/update-payment-status', async (req, res) => {
+        app.post('/api/update-payment-status', async (req, res) => {  // Changed '/update-payment-status' to '/api/update-payment-status'
             const { order_id } = req.body;
             const userId = req.session.userId;
 
