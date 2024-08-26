@@ -45,7 +45,23 @@ const client = new MongoClient(uri, {
     useUnifiedTopology: true
 });
 
+// Function to process tasks in chunks to avoid timeout
+async function processInChunks(dataArray, processFunc) {
+    const chunkSize = 100;
+    for (let i = 0; i < dataArray.length; i += chunkSize) {
+        const chunk = dataArray.slice(i, i + chunkSize);
+        await processFunc(chunk);
+    }
+}
 
+// Example function for background processing (can be connected to a task queue)
+async function backgroundTaskProcessor() {
+    const tasks = await getPendingTasksFromQueue();
+    await processInChunks(tasks, async (task) => {
+        // Handle each task
+        // Call the API or query the database here
+    });
+}
 
 async function run() {
     try {
@@ -124,14 +140,14 @@ async function run() {
 
                 const amount = 1000; // The amount in paise (1000 paise = 10 INR)
                 const currency = 'INR';
-                
+
                 const options = {
                     amount: amount,
                     currency: currency,
                     receipt: `order_rcptid_${userId}`
                 };
 
-                razorpay.orders.create(options, function(err, order) {
+                razorpay.orders.create(options, function (err, order) {
                     if (err) {
                         console.error("Error creating Razorpay order:", err);
                         return res.status(500).json({ error: err });
