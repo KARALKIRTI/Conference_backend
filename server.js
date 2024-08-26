@@ -3,26 +3,30 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const session = require('express-session');
 const Razorpay = require('razorpay');
-const { MongoClient, ObjectId } = require('mongodb'); // Import MongoDB client
+const { MongoClient, ObjectId } = require('mongodb');
+const MongoStore = require('connect-mongo'); // Import connect-mongo
 
 const app = express();
 const PORT = 3000;
 
 // Razorpay instance configuration
 const razorpay = new Razorpay({
-    key_id: 'rzp_test_RZOmakzGiuTjwu', // Replace with your Razorpay key_id
-    key_secret: 'CNwcGQA4g8ryKl93RfxVbpBS' // Replace with your Razorpay key_secret
+    key_id: process.env.RAZORPAY_KEY_ID, // Use environment variables for sensitive data
+    key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Use express-session middleware
+// Use express-session middleware with MongoStore
 app.use(session({
     secret: 'your-secret-key',
     resave: false,
     saveUninitialized: true,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI, // Use your MongoDB URI from environment variables
+    }),
     cookie: { secure: false }
 }));
 
@@ -30,7 +34,7 @@ app.use(session({
 app.use(express.static(path.join(__dirname, 'public')));
 
 // MongoDB connection string
-const uri = "mongodb+srv://Kirtikaral2003:Hloworld123@hatim.eriac.mongodb.net/Conference?retryWrites=true&w=majority";
+const uri = process.env.MONGODB_URI; // Use environment variable for MongoDB URI
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 client.connect(err => {
@@ -100,21 +104,30 @@ client.connect(err => {
             return res.status(401).send({ success: false, message: "User not logged in" });
         }
 
-        const amount = 1000; // The amount in paise (1000 paise = 10 INR)
-        const currency = 'INR';
-        
-        const options = {
-            amount: amount,
-            currency: currency,
-            receipt: `order_rcptid_${userId}`
-        };
-
-        razorpay.orders.create(options, function(err, order) {
+        usersCollection.findOne({ _id: ObjectId(userId) }, (err, user) => {
             if (err) {
-                console.error("Error creating Razorpay order:", err);
-                return res.status(500).send({ error: err });
+                return res.status(500).send({ success: false, message: "Database error" });
             }
-            res.send(order);
+            if (user.payment_status === 'done') {
+                return res.send({ success: false, message: "Payment already done!" });
+            }
+
+            const amount = 1000; // The amount in paise (1000 paise = 10 INR)
+            const currency = 'INR';
+            
+            const options = {
+                amount: amount,
+                currency: currency,
+                receipt: `order_rcptid_${userId}`
+            };
+
+            razorpay.orders.create(options, function(err, order) {
+                if (err) {
+                    console.error("Error creating Razorpay order:", err);
+                    return res.status(500).send({ error: err });
+                }
+                res.send(order);
+            });
         });
     });
 
@@ -169,3 +182,6 @@ client.connect(err => {
         console.log(`Server running on http://localhost:${PORT}`);
     });
 });
+
+// Export the app for Vercel
+module.exports = app;
