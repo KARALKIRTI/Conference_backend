@@ -32,6 +32,63 @@ const countdownInterval = setInterval(function() {
 
 }, 1000); // Update every second
 
+// Function to initiate Razorpay payment
+function startRazorpay(userData) {
+    // Check if payment is already done
+    if (userData.user.payment_status === 'done') {
+        alert('Payment already done!');
+        return; // Do not proceed with Razorpay if payment is already done
+    }
+
+    // Create a Razorpay order
+    fetch('/create-order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(order => {
+        var options = {
+            "key": "rzp_test_RZOmakzGiuTjwu", // Enter the Key ID generated from the Dashboard
+            "amount": order.amount, // Amount is in currency subunits. Default currency is INR. Hence, 50000 means 50000 paise or ₹500.00.
+            "currency": "INR",
+            "name": "Conference",
+            "description": "Conference Ticket Purchase",
+            "order_id": order.id, // This is the order_id created in the backend.
+            "handler": function (response){
+                alert('Payment successful!');
+                // Update payment status in the database
+                fetch('/update-payment-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ order_id: order.id })
+                })
+                .then(response => response.json())
+                .then(statusUpdate => {
+                    if (statusUpdate.success) {
+                        console.log("Payment status updated successfully");
+                    } else {
+                        console.log("Failed to update payment status");
+                    }
+                });
+            },
+            "prefill": {
+                "name": userData.user.name,
+                "email": userData.user.email,
+                "contact": userData.user.phone
+            },
+            "theme": {
+                "color": "#3399cc"
+            }
+        };
+        var rzp1 = new Razorpay(options);
+        rzp1.open();
+    });
+}
+
 // Handle showing the modal when "Get Tickets" is clicked
 document.getElementById('payBtn').addEventListener('click', function() {
     // Check if the user is already logged in
@@ -46,53 +103,7 @@ document.getElementById('payBtn').addEventListener('click', function() {
                     .then(response => response.json())
                     .then(userData => {
                         if (userData.success) {
-                            // Create a Razorpay order
-                            fetch('/create-order', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                }
-                            })
-                            .then(response => response.json())
-                            .then(order => {
-                                var options = {
-                                    "key": "rzp_test_RZOmakzGiuTjwu", // Enter the Key ID generated from the Dashboard
-                                    "amount": order.amount, // Amount is in currency subunits. Default currency is INR. Hence, 50000 means 50000 paise or ₹500.00.
-                                    "currency": "INR",
-                                    "name": "Conference",
-                                    "description": "Conference Ticket Purchase",
-                                    "order_id": order.id, // This is the order_id created in the backend.
-                                    "handler": function (response){
-                                        alert('Payment successful!');
-                                        // Update payment status in the database
-                                        fetch('/update-payment-status', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json'
-                                            },
-                                            body: JSON.stringify({ order_id: order.id })
-                                        })
-                                        .then(response => response.json())
-                                        .then(statusUpdate => {
-                                            if (statusUpdate.success) {
-                                                console.log("Payment status updated successfully");
-                                            } else {
-                                                console.log("Failed to update payment status");
-                                            }
-                                        });
-                                    },
-                                    "prefill": {
-                                        "name": userData.user.name,
-                                        "email": userData.user.email,
-                                        "contact": userData.user.phone
-                                    },
-                                    "theme": {
-                                        "color": "#3399cc"
-                                    }
-                                };
-                                var rzp1 = new Razorpay(options);
-                                rzp1.open();
-                            });
+                            startRazorpay(userData);
                         } else {
                             alert(userData.message);
                         }
@@ -179,6 +190,8 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
         if (data.success) {
             alert('Signup successful!');
             document.getElementById('authModal').style.display = 'none';
+            // Automatically start Razorpay after signup
+            startRazorpay({ user: { name: name, email: email, phone: phone, payment_status: 'pending' } });
         } else {
             alert(data.message);
         }
@@ -204,6 +217,16 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
         if (data.success) {
             alert('Login successful!');
             document.getElementById('authModal').style.display = 'none';
+            // Automatically start Razorpay after login
+            fetch('/get-user-details')
+                .then(response => response.json())
+                .then(userData => {
+                    if (userData.success) {
+                        startRazorpay(userData);
+                    } else {
+                        alert(userData.message);
+                    }
+                });
         } else {
             alert(data.message);
         }
