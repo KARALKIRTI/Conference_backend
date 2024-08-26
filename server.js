@@ -24,6 +24,9 @@ const razorpay = new Razorpay({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Use express-session middleware with MongoStore
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -34,9 +37,6 @@ app.use(session({
     }),
     cookie: { secure: false }
 }));
-
-// Serve static files (like your HTML, CSS, JS files)
-app.use(express.static(path.join(__dirname, 'public')));
 
 // MongoDB connection string
 const uri = process.env.MONGODB_URI;
@@ -182,6 +182,11 @@ async function run() {
         // Serve the index.html file for the root route
         app.get('/', (req, res) => {
             res.sendFile(path.join(__dirname, 'public', 'index.html'));
+        });
+
+        // Handle 404 for any unrecognized routes
+        app.use((req, res, next) => {
+            res.status(404).send("Sorry, that route doesn't exist.");
         });
 
         // Start server
