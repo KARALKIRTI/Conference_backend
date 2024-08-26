@@ -39,12 +39,7 @@ app.use(session({
 }));
 
 // MongoDB connection string
-const client = new MongoClient(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    ssl: true,
-    serverSelectionTimeoutMS: 30000, // 30 seconds timeout
-});
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 
 async function run() {
