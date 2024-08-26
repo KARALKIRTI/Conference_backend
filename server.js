@@ -40,12 +40,7 @@ app.use(session({
 
 // MongoDB connection string
 const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri, { 
-    useNewUrlParser: true, 
-    useUnifiedTopology: true,
-    connectTimeoutMS: 10000, // 10 seconds
-    serverSelectionTimeoutMS: 10000 // 10 seconds
-});
+const client = new MongoClient(uri);
 
 async function run() {
     try {
