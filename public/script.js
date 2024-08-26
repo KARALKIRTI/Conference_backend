@@ -32,7 +32,12 @@ function startRazorpay(userData) {
             'Content-Type': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             var options = {
@@ -51,13 +56,21 @@ function startRazorpay(userData) {
                         },
                         body: JSON.stringify({ order_id: data.order.id })
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok ' + response.statusText);
+                        }
+                        return response.json();
+                    })
                     .then(statusUpdate => {
                         if (statusUpdate.success) {
                             console.log("Payment status updated successfully");
                         } else {
                             console.log("Failed to update payment status");
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error updating payment status:', error);
                     });
                 },
                 "prefill": {
@@ -74,12 +87,14 @@ function startRazorpay(userData) {
         } else {
             alert(data.message);
         }
+    })
+    .catch(error => {
+        console.error('There was an error creating the order:', error);
     });
 }
 
 // Handle showing the modal when "Get Tickets" is clicked
 document.getElementById('payBtn').addEventListener('click', function() {
-    // Always show the login/signup modal first
     document.getElementById('authModal').style.display = 'block';
 });
 
@@ -97,14 +112,23 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
         },
         body: JSON.stringify({ email, password }),
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             alert('Login successful!');
             document.getElementById('authModal').style.display = 'none';
-            // After successful login, check the payment status
             fetch('/get-user-details')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
                 .then(userData => {
                     if (userData.success) {
                         if (userData.user.payment_status === 'done') {
@@ -115,10 +139,16 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
                     } else {
                         alert(userData.message);
                     }
+                })
+                .catch(error => {
+                    console.error('Error fetching user details:', error);
                 });
         } else {
             alert(data.message);
         }
+    })
+    .catch(error => {
+        console.error('There was an error with the login:', error);
     });
 });
 
@@ -156,16 +186,23 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
         },
         body: JSON.stringify({ name, email, phone, password }),
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             alert('Signup successful!');
             document.getElementById('authModal').style.display = 'none';
-            // After successful signup, directly initiate Razorpay as the payment status will be 'pending'
             startRazorpay({ user: { name: name, email: email, phone: phone, payment_status: 'pending' } });
         } else {
             alert(data.message);
         }
+    })
+    .catch(error => {
+        console.error('There was an error with the signup:', error);
     });
 });
 

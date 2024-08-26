@@ -40,7 +40,12 @@ app.use(session({
 
 // MongoDB connection string
 const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+const client = new MongoClient(uri, { 
+    useNewUrlParser: true, 
+    useUnifiedTopology: true,
+    connectTimeoutMS: 10000, // 10 seconds
+    serverSelectionTimeoutMS: 10000 // 10 seconds
+});
 
 async function run() {
     try {
@@ -75,7 +80,7 @@ async function run() {
                     req.session.loggedIn = true;
                     res.json({ success: true });
                 } else {
-                    res.json({ success: false, message: "Incorrect email or password" });
+                    res.status(401).json({ success: false, message: "Incorrect email or password" });
                 }
             } catch (err) {
                 console.error('Login Database Error:', err);
