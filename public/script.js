@@ -188,7 +188,7 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Network response was not ok ' + response.statusText);
+            throw new Error(`Server error: ${response.statusText}`);
         }
         return response.json();
     })
@@ -196,14 +196,15 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
         if (data.success) {
             alert('Signup successful!');
             document.getElementById('authModal').style.display = 'none';
-            startRazorpay({ user: { name: name, email: email, phone: phone, payment_status: 'pending' } });
+            startRazorpay({ user: { name, email, phone, payment_status: 'pending' } });
         } else {
             alert(data.message);
         }
     })
     .catch(error => {
-        console.error('There was an error with the signup:', error);
-    });
+        console.error('Error during signup:', error);
+        alert('An error occurred during signup. Please try again.');
+    });    
 });
 
 // Handle form toggle between login and signup

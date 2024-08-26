@@ -39,7 +39,12 @@ app.use(session({
 }));
 
 // MongoDB connection string
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+});
+
 
 
 async function run() {
