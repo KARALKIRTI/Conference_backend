@@ -13,11 +13,11 @@ const PORT = process.env.PORT || 3000;
 
 // CORS configuration
 app.use(cors({
-    origin: 'https://conference-front-end-karalkirtis-projects.vercel.app', // Ensure this is your exact frontend URL
-    credentials: true // If your app uses cookies/sessions
+    origin: ['https://conference-front-end-karalkirtis-projects.vercel.app', 'https://conference-front-end-theta.vercel.app'], // Include both URLs to be safe
+    credentials: true // Allow credentials (cookies, etc.)
 }));
 
-// Debug: Log environment variables to ensure they are loaded correctly
+// Debug: Log environment variables to ensure they are loaded
 console.log('Razorpay Key ID:', process.env.RAZORPAY_KEY_ID);
 console.log('MongoDB URI:', process.env.MONGODB_URI);
 
