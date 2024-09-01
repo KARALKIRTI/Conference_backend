@@ -5,7 +5,7 @@ const session = require('express-session');
 const Razorpay = require('razorpay');
 const { MongoClient, ObjectId } = require('mongodb');
 const MongoStore = require('connect-mongo');
-const cors = require('cors'); // Import cors
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 
 // CORS configuration
 app.use(cors({
-    origin: 'https://your-frontend-domain.com', // Replace with your front-end domain
+    origin: 'https://conference-front-end-karalkirtis-projects.vercel.app', // Correctly set the frontend URL
     credentials: true // If your app uses cookies/sessions
 }));
 
@@ -190,9 +190,9 @@ async function run() {
             }
         });
 
-        // Serve the index.html file for the root route
+        // Serve a simple response at the root route
         app.get('/', (req, res) => {
-            res.sendFile(path.join(__dirname, 'public', 'index.html'));
+            res.send('Backend is running.');
         });
 
         // Handle 404 for any unrecognized routes
@@ -213,4 +213,3 @@ run().catch(console.dir);
 
 // Export the app for Vercel
 module.exports = app;
-
