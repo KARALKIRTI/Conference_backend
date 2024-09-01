@@ -13,11 +13,11 @@ const PORT = process.env.PORT || 3000;
 
 // CORS configuration
 app.use(cors({
-    origin: 'https://conference-front-end-karalkirtis-projects.vercel.app', // Correctly set the frontend URL
+    origin: 'https://conference-front-end-karalkirtis-projects.vercel.app', // Ensure this is your exact frontend URL
     credentials: true // If your app uses cookies/sessions
 }));
 
-// Debug: Log environment variables to ensure they are loaded
+// Debug: Log environment variables to ensure they are loaded correctly
 console.log('Razorpay Key ID:', process.env.RAZORPAY_KEY_ID);
 console.log('MongoDB URI:', process.env.MONGODB_URI);
 
@@ -30,9 +30,6 @@ const razorpay = new Razorpay({
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Use express-session middleware with MongoStore
 app.use(session({
