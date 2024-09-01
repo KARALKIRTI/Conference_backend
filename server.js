@@ -5,10 +5,17 @@ const session = require('express-session');
 const Razorpay = require('razorpay');
 const { MongoClient, ObjectId } = require('mongodb');
 const MongoStore = require('connect-mongo');
+const cors = require('cors'); // Import cors
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// CORS configuration
+app.use(cors({
+    origin: 'https://your-frontend-domain.com', // Replace with your front-end domain
+    credentials: true // If your app uses cookies/sessions
+}));
 
 // Debug: Log environment variables to ensure they are loaded
 console.log('Razorpay Key ID:', process.env.RAZORPAY_KEY_ID);
@@ -206,3 +213,4 @@ run().catch(console.dir);
 
 // Export the app for Vercel
 module.exports = app;
+
