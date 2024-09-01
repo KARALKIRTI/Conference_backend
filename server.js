@@ -5,162 +5,204 @@ const session = require('express-session');
 const Razorpay = require('razorpay');
 const { MongoClient, ObjectId } = require('mongodb');
 const MongoStore = require('connect-mongo');
-const dotenv = require('dotenv');
-const bcrypt = require('bcrypt');
-const csrf = require('csurf');
-
-// Load environment variables
-dotenv.config();
+require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
-// Razorpay instance
+// Debug: Log environment variables to ensure they are loaded
+console.log('Razorpay Key ID:', process.env.RAZORPAY_KEY_ID);
+console.log('MongoDB URI:', process.env.MONGODB_URI);
+
+// Razorpay instance configuration
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(csrf({ cookie: true }));
-
-// MongoDB connection
-let db, usersCollection;
-MongoClient.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(client => {
-        console.log('MongoDB connected');
-        db = client.db();
-        usersCollection = db.collection('users');
-    })
-    .catch(err => console.error('MongoDB connection error:', err));
-
-// Session management
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'your_secret_key',
-    resave: false,
-    saveUninitialized: true,
-    store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
-    cookie: { maxAge: 1000 * 60 * 60 * 24 }, // 1 day
-}));
-
-// Signup route with password hashing
-app.post('/api/signup', async (req, res) => {
-    const { name, email, phone, password } = req.body;
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await usersCollection.insertOne({
-            name,
-            email,
-            phone,
-            password: hashedPassword,
-            payment_status: 'pending',
-        });
-        req.session.userId = user.insertedId;
-        res.status(201).send({ message: 'User signed up successfully', csrfToken: req.csrfToken() });
-    } catch (error) {
-        res.status(500).send({ error: 'Failed to sign up user' });
-    }
-});
-
-// Login route with password verification
-app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        const user = await usersCollection.findOne({ email });
-        if (user && await bcrypt.compare(password, user.password)) {
-            req.session.userId = user._id;
-            res.status(200).send({ message: 'Logged in successfully', csrfToken: req.csrfToken() });
-        } else {
-            res.status(401).send({ error: 'Invalid email or password' });
-        }
-    } catch (error) {
-        res.status(500).send({ error: 'Failed to log in' });
-    }
-});
-
-// Check if user exists
-app.get('/api/check-user', async (req, res) => {
-    const { email } = req.query;
-    try {
-        const user = await usersCollection.findOne({ email });
-        res.status(200).send({ exists: !!user });
-    } catch (error) {
-        res.status(500).send({ error: 'Failed to check user' });
-    }
-});
-
-// Check if user is logged in
-app.get('/api/check-login', (req, res) => {
-    if (req.session.userId) {
-        res.status(200).send({ loggedIn: true });
-    } else {
-        res.status(401).send({ loggedIn: false });
-    }
-});
-
-// Create Razorpay order
-app.post('/api/create-order', async (req, res) => {
-    if (!req.session.userId) {
-        return res.status(401).send({ error: 'User not logged in' });
-    }
-    try {
-        const user = await usersCollection.findOne({ _id: ObjectId(req.session.userId) });
-        if (user.payment_status === 'done') {
-            return res.status(400).send({ error: 'Payment already completed' });
-        }
-        const order = await razorpay.orders.create({
-            amount: 50000, // Example amount in paise (500.00 INR)
-            currency: 'INR',
-            receipt: `receipt_${Date.now()}`,
-        });
-        res.status(201).send({ orderId: order.id, csrfToken: req.csrfToken() });
-    } catch (error) {
-        res.status(500).send({ error: 'Failed to create order' });
-    }
-});
-
-// Get logged-in user's details
-app.get('/api/get-user-details', async (req, res) => {
-    if (!req.session.userId) {
-        return res.status(401).send({ error: 'User not logged in' });
-    }
-    try {
-        const user = await usersCollection.findOne({ _id: ObjectId(req.session.userId) });
-        res.status(200).send(user);
-    } catch (error) {
-        res.status(500).send({ error: 'Failed to get user details' });
-    }
-});
-
-// Update payment status
-app.post('/api/update-payment-status', async (req, res) => {
-    const { order_id } = req.body;
-    try {
-        const result = await usersCollection.updateOne(
-            { _id: ObjectId(req.session.userId) },
-            { $set: { payment_status: 'done', order_id } }
-        );
-        res.status(200).send({ message: 'Payment status updated' });
-    } catch (error) {
-        res.status(500).send({ error: 'Failed to update payment status' });
-    }
-});
 
 // Serve static files
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Use express-session middleware with MongoStore
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    resave: false,
+    saveUninitialized: true,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
+        collectionName: 'sessions'
+    }),
+    cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
+
+// MongoDB connection string
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 });
 
-// 404 Error Handling
-app.use((req, res) => {
-    res.status(404).send({ error: 'Route not found' });
-});
+async function run() {
+    try {
+        console.log('Attempting to connect to MongoDB...');
+        await client.connect();
+        console.log('Connected to MongoDB');
 
-// Start Server
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+        const db = client.db('Conference');
+        const usersCollection = db.collection('users');
 
-// Vercel Export
+        // API to handle signup
+        app.post('/api/signup', async (req, res) => {
+            const { name, email, phone, password } = req.body;
+            try {
+                const result = await usersCollection.insertOne({ name, email, phone, password, payment_status: 'pending' });
+                req.session.userId = result.insertedId;
+                req.session.loggedIn = true;
+                res.json({ success: true });
+            } catch (err) {
+                console.error('Signup Database Error:', err);
+                res.status(500).json({ success: false, message: "Database error" });
+            }
+        });
+
+        // API to handle login
+        app.post('/api/login', async (req, res) => {
+            const { email, password } = req.body;
+            try {
+                const user = await usersCollection.findOne({ email, password });
+                if (user) {
+                    req.session.userId = user._id;
+                    req.session.loggedIn = true;
+                    res.json({ success: true });
+                } else {
+                    res.status(401).json({ success: false, message: "Incorrect email or password" });
+                }
+            } catch (err) {
+                console.error('Login Database Error:', err);
+                res.status(500).json({ success: false, message: "Database error" });
+            }
+        });
+
+        // API to check if a user already exists
+        app.post('/api/check-user', async (req, res) => {
+            const email = req.body.email;
+            try {
+                const user = await usersCollection.findOne({ email });
+                res.json({ exists: !!user });
+            } catch (err) {
+                console.error('Check User Database Error:', err);
+                res.status(500).json({ message: "Database error" });
+            }
+        });
+
+        // API to check if user is logged in
+        app.get('/api/check-login', (req, res) => {
+            if (req.session.loggedIn) {
+                res.json({ loggedIn: true });
+            } else {
+                res.json({ loggedIn: false });
+            }
+        });
+
+        // API to create Razorpay order
+        app.post('/api/create-order', async (req, res) => {
+            const userId = req.session.userId;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "User not logged in" });
+            }
+
+            try {
+                const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+                if (user.payment_status === 'done') {
+                    return res.json({ success: false, message: "Payment already done!" });
+                }
+
+                const amount = 1000; // The amount in paise (1000 paise = 10 INR)
+                const currency = 'INR';
+
+                const options = {
+                    amount: amount,
+                    currency: currency,
+                    receipt: `order_rcptid_${userId}`
+                };
+
+                razorpay.orders.create(options, function (err, order) {
+                    if (err) {
+                        console.error("Error creating Razorpay order:", err);
+                        return res.status(500).json({ error: err });
+                    }
+                    res.json({ success: true, order });
+                });
+            } catch (err) {
+                console.error('Create Order Database Error:', err);
+                res.status(500).json({ success: false, message: "Database error" });
+            }
+        });
+
+        // API to get logged-in user's details
+        app.get('/api/get-user-details', async (req, res) => {
+            if (req.session.loggedIn) {
+                try {
+                    const user = await usersCollection.findOne({ _id: new ObjectId(req.session.userId) });
+                    if (user) {
+                        res.json({ success: true, user: { name: user.name, email: user.email, phone: user.phone, payment_status: user.payment_status } });
+                    } else {
+                        res.json({ success: false, message: "User not found" });
+                    }
+                } catch (err) {
+                    console.error("Get User Details Database Error:", err);
+                    res.status(500).json({ error: "Database error" });
+                }
+            } else {
+                res.json({ success: false, message: "Not logged in" });
+            }
+        });
+
+        // API to update payment status after payment completion
+        app.post('/api/update-payment-status', async (req, res) => {
+            const { order_id } = req.body;
+            const userId = req.session.userId;
+
+            if (userId && order_id) {
+                try {
+                    await usersCollection.updateOne(
+                        { _id: new ObjectId(userId) },
+                        { $set: { payment_status: 'done' } }
+                    );
+                    res.json({ success: true });
+                } catch (err) {
+                    console.error("Error updating payment status:", err);
+                    res.status(500).json({ success: false, message: "Database error" });
+                }
+            } else {
+                res.status(400).json({ success: false, message: "Invalid user or order ID" });
+            }
+        });
+
+        // Serve the index.html file for the root route
+        app.get('/', (req, res) => {
+            res.sendFile(path.join(__dirname, 'public', 'index.html'));
+        });
+
+        // Handle 404 for any unrecognized routes
+        app.use((req, res, next) => {
+            res.status(404).send("Sorry, that route doesn't exist.");
+        });
+
+        // Start server
+        app.listen(PORT, () => {
+            console.log(`Server running on http://localhost:${PORT}`);
+        });
+    } catch (err) {
+        console.error('Error connecting to MongoDB:', err);
+    }
+}
+
+run().catch(console.dir);
+
+// Export the app for Vercel
 module.exports = app;
