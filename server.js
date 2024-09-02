@@ -6,20 +6,18 @@ const Razorpay = require('razorpay');
 const { MongoClient, ObjectId } = require('mongodb');
 const MongoStore = require('connect-mongo');
 const cors = require('cors');
+const { log } = require('console');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // CORS configuration
-app.use(cors({
-    origin: ['https://conference-front-end-theta.vercel.app'], // Include both URLs to be safe
-    credentials: true // Allow credentials (cookies, etc.)
-}));
 
-// Debug: Log environment variables to ensure they are loaded
-console.log('Razorpay Key ID:', process.env.RAZORPAY_KEY_ID);
-console.log('MongoDB URI:', process.env.MONGODB_URI);
+app.use(cors({
+    credentials:true,
+    origin : 'https://conference-front-end-theta.vercel.app'
+}));
 
 // Razorpay instance configuration
 const razorpay = new Razorpay({
@@ -46,8 +44,6 @@ app.use(session({
 // MongoDB connection string
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
 });
 
 async function run() {
@@ -78,9 +74,12 @@ async function run() {
             const { email, password } = req.body;
             try {
                 const user = await usersCollection.findOne({ email, password });
+                // console.log("Hello1");
                 if (user) {
                     req.session.userId = user._id;
                     req.session.loggedIn = true;
+                    console.log(req.session);
+                    // console.log("Hello2");
                     res.json({ success: true });
                 } else {
                     res.status(401).json({ success: false, message: "Incorrect email or password" });
@@ -149,6 +148,7 @@ async function run() {
 
         // API to get logged-in user's details
         app.get('/api/get-user-details', async (req, res) => {
+            console.log(req.session);
             if (req.session.loggedIn) {
                 try {
                     const user = await usersCollection.findOne({ _id: new ObjectId(req.session.userId) });
